@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { ThemeProvider, createTheme, Box } from "@mui/material";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import SideMenu from "./components/SideMenu";
-import MainContent from "./components/MainContent";
+import WebsiteSetup from "./components/WebsiteSetup";
+import Chat from "./components/Chat";
 
 const darkTheme = createTheme({
   palette: {
@@ -26,31 +28,36 @@ export default function App() {
 
   return (
     <ThemeProvider theme={darkTheme}>
-      <Box
-        sx={{
-          bgcolor: "background.default",
-          color: "text.primary",
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          fontFamily: "Google Sans, Arial, sans-serif",
-        }}
-      >
-        <Header />
-        <Box sx={{ display: "flex", flexGrow: 1 }}>
-          <SideMenu isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
-          <Box
-            sx={{
-              flexGrow: 1,
-              transition: "margin-left 0.25s ease-in-out",
-              ml: { md: isExpanded ? "60px" : "68px" }, 
-              p: 2,
-            }}
-          >
-            <MainContent />
+      <Router>
+        <Box
+          sx={{
+            bgcolor: "background.default",
+            color: "text.primary",
+            minHeight: "100vh",
+            display: "flex",
+            flexDirection: "column",
+            fontFamily: "Google Sans, Arial, sans-serif",
+          }}
+        >
+          <Header />
+          <Box sx={{ display: "flex", flexGrow: 1 }}>
+            <SideMenu isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
+            <Box
+              sx={{
+                flexGrow: 1,
+                transition: "margin-left 0.25s ease-in-out",
+                ml: { md: isExpanded ? "60px" : "68px" },
+                p: 2,
+              }}
+            >
+              <Routes>
+                <Route path="/" element={<WebsiteSetup />} />
+                <Route path="/chat" element={<Chat />} />
+              </Routes>
+            </Box>
           </Box>
         </Box>
-      </Box>
+      </Router>
     </ThemeProvider>
   );
 }

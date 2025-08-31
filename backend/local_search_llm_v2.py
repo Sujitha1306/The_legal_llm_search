@@ -13,9 +13,10 @@ class OllamaSearchAgent:
     """
     
     SOURCE_SELECTION_PROMPT = """
-You are an expert at selecting the most relevant online resource.
+You are an expert at selecting the most relevant online resources.
 
-Respond with ONLY the number of the most appropriate option. Do not provide any other text or explanation.
+Respond with ONLY the numbers of the most appropriate options, separated by commas.
+Do not provide any other text or explanation.
 
 Here is the list of available websites:
 {sites_list}
@@ -51,10 +52,11 @@ Follow these rules strictly:
         self.console = Console()
         self.console.print(f"[bold green]Agent initialized with model '{self.model}' and {len(self.whitelist)} whitelisted sites.[/bold green]")
 
-    def _select_relevant_source(self, question: str) -> str | None:
-        
+    def _select_relevant_source(self, question: str) -> list[str]:
+        """
+        Select multiple relevant sources instead of just one.
+        """
         sites_list = "\n".join([f"{i+1}. {url}" for i, url in enumerate(self.whitelist)])
-        
         system_prompt = self.SOURCE_SELECTION_PROMPT.format(sites_list=sites_list)
 
         try:
@@ -68,24 +70,23 @@ Follow these rules strictly:
             )
             
             content = response['message']['content'].strip()
-            
-            ## Change: The logic is now much more robust. It looks for a number instead of a URL.
-            # Find the first number in the response.
-            match = re.search(r'\d+', content)
-            if match:
-                selected_index = int(match.group(0)) - 1
-                if 0 <= selected_index < len(self.whitelist):
-                    return self.whitelist[selected_index]
-                else:
-                    self.console.print(f"[bold red]Warning: LLM returned an invalid number: {selected_index + 1}[/bold red]")
-                    return None
-            else:
-                self.console.print(f"[bold red]Warning: LLM did not return a valid number. Response: '{content}'[/bold red]")
-                return None
+            matches = re.findall(r'\d+', content)
+
+            selected_urls = []
+            for m in matches:
+                idx = int(m) - 1
+                if 0 <= idx < len(self.whitelist):
+                    selected_urls.append(self.whitelist[idx])
+
+            if not selected_urls:
+                self.console.print(f"[bold red]Warning: LLM did not return valid numbers. Response: '{content}'[/bold red]")
+                return []
+
+            return list(set(selected_urls))  # dedupe
 
         except Exception as e:
             self.console.print(f"[bold red]Error during source selection: {e}[/bold red]")
-            return None
+            return []
 
     def _scrape_and_extract_text(self, url: str) -> str | None:
         """
@@ -97,7 +98,6 @@ Follow these rules strictly:
 
             soup = BeautifulSoup(response.content, 'lxml')
 
-            ## Change: Added more common non-content tags to the removal list for cleaner text.
             for tag in soup(self.TAGS_TO_REMOVE):
                 tag.decompose()
 
@@ -108,7 +108,6 @@ Follow these rules strictly:
             ]
             
             full_text = ' '.join(text_chunks)
-            # Normalize whitespace to a single space
             return re.sub(r'\s+', ' ', full_text)
 
         except requests.RequestException as e:
@@ -130,7 +129,7 @@ Follow these rules strictly:
                     {'role': 'system', 'content': system_prompt},
                     {'role': 'user', 'content': question}
                 ],
-                options={'temperature': 0.1} # A little creativity can help summarization
+                options={'temperature': 0.1}
             )
             return response['message']['content']
         except Exception as e:
@@ -141,40 +140,43 @@ Follow these rules strictly:
         """
         Main method to handle a user's query through the full RAG pipeline.
         """
-        context = None
-        source_url = None
-        
-        # Check if it's a follow-up question
+        results = {}
+        source_urls = []
+
+        # Follow-up handling
         if question.lower().strip() in self.FOLLOW_UP_PHRASES and self.last_context:
             self.console.print("[cyan]Detected follow-up question. Reusing last context...[/cyan]")
-            context = self.last_context
-            source_url = self.last_source
+            results[self.last_source] = self._synthesize_answer(question, self.last_context)
+            source_urls = [self.last_source]
         else:
-           
-            source_url = self._select_relevant_source(question)
-
-            if not source_url:
+            source_urls = self._select_relevant_source(question)
+            if not source_urls:
                 return {
-                    "answer": "I could not determine a relevant source from the whitelist to answer your question.",
-                    "source": None
+                    "answers": {"system": "I could not determine relevant sources from the whitelist."},
+                    "sources": None
                 }
-            self.console.print(f"   [dim]Source selected: {source_url}[/dim]")
 
-            context = self._scrape_and_extract_text(source_url)
+            self.console.print(f"   [dim]Sources selected: {', '.join(source_urls)}[/dim]")
 
-            if not context:
+            for url in source_urls:
+                ctx = self._scrape_and_extract_text(url)
+                if ctx:
+                    answer = self._synthesize_answer(question, ctx)
+                    results[url] = answer
+
+            if not results:
                 return {
-                    "answer": f"I was unable to retrieve or process the content from {source_url}.",
-                    "source": source_url
+                    "answers": {"system": "I was unable to retrieve or process content from the selected sources."},
+                    "sources": source_urls
                 }
-            
-            # Store for potential follow-ups
-            self.last_context = context
-            self.last_source = source_url
 
-        answer = self._synthesize_answer(question, context)
+            # Store last context & source for follow-up (use the first one only)
+            first_src = list(results.keys())[0]
+            self.last_context = ctx
+            self.last_source = first_src
 
-        return {"answer": answer, "source": source_url}
+        return {"answers": results, "sources": source_urls}
+
 
 if __name__ == "__main__":
     console = Console()
@@ -184,14 +186,12 @@ if __name__ == "__main__":
         "https://timesofindia.indiatimes.com/india",
         "https://indianexpress.com/section/india/",
         "https://www.hindustantimes.com/india-news",
-        "https://www.ndtv.com/india",
         "https://www.indiatoday.in/india",
         "https://www.firstpost.com/category/india",
         "https://thewire.in/category/politics/external-affairs"
     ]
     
     OLLAMA_MODEL = 'gemma3:12b' 
-    
     
     console.print(Panel("[bold yellow]Please select the websites to use for this session as a reference.[/bold yellow]"))
     for i, site in enumerate(ALL_SITES):
@@ -227,7 +227,6 @@ if __name__ == "__main__":
         if user_question.lower() == 'exit':
             break
         
-        ## Change: Added a spinner for better user feedback during processing.
         spinner = Halo(text='Thinking...', spinner='dots')
         try:
             spinner.start()
@@ -237,11 +236,12 @@ if __name__ == "__main__":
             spinner.fail(f"An error occurred: {e}")
             continue
 
-        ## Change: Used 'rich.panel' to format the final output beautifully.
-        answer_panel = Panel(
-            result["answer"],
-            title="[bold green]Final Answer[/bold green]",
-            subtitle=f"[dim]Source: {result['source']}[/dim]",
-            border_style="blue"
-        )
-        console.print(answer_panel)
+        # Display each answer separately like Google results
+        for src, ans in result["answers"].items():
+            answer_panel = Panel(
+                ans,
+                title="[bold green]Answer[/bold green]",
+                subtitle=f"[dim]Source: {src}[/dim]",
+                border_style="blue"
+            )
+            console.print(answer_panel)
