@@ -1,0 +1,37 @@
+[
+    {
+        "id": 1,
+        "name": "https://indiankanoon.org/",
+        "displayName": "Indian Kanoon"
+    },
+    {
+        "id": 2,
+        "name": "https://www.livelaw.in/",
+        "displayName": "Live Law"
+    },
+    {
+        "id": 3,
+        "name": "https://www.barandbench.com/",
+        "displayName": "Bar & Bench"
+    },
+    {
+        "id": 4,
+        "name": "https://main.sci.gov.in/judgments",
+        "displayName": "Supreme Court of India"
+    },
+    {
+        "id": 5,
+        "name": "https://highcourtchd.gov.in/",
+        "displayName": "Punjab & Haryana HC"
+    },
+    {
+        "id": 6,
+        "name": "https://www.sci.gov.in/",
+        "displayName": "SCI Official Portal"
+    },
+    {
+        "id": 7,
+        "name": "https://www.thehindu.com/news/national/",
+        "displayName": "The Hindu (Legal)"
+    }
+]

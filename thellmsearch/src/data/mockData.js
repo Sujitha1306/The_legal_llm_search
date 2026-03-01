@@ -1,11 +1,11 @@
-// Real Indian news sites supported by the backend (name = full URL sent to API)
+// Indian Legal Sources — Phase 1 migration
+// Old news sources archived in backend/legacy_news_sources.json
 export const initialWebsites = [
-  { id: 1, name: "https://www.thehindu.com/news/national/", displayName: "The Hindu" },
-  { id: 2, name: "https://timesofindia.indiatimes.com/india", displayName: "Times of India" },
-  { id: 3, name: "https://indianexpress.com/section/india/", displayName: "Indian Express" },
-  { id: 4, name: "https://www.hindustantimes.com/india-news", displayName: "Hindustan Times" },
-  { id: 5, name: "https://www.indiatoday.in/india", displayName: "India Today" },
-  { id: 6, name: "https://www.firstpost.com/category/india", displayName: "Firstpost" },
-  { id: 7, name: "https://thewire.in/category/politics/external-affairs", displayName: "The Wire" },
+  { id: 1, name: "https://indiankanoon.org/", displayName: "Indian Kanoon" },
+  { id: 2, name: "https://www.livelaw.in/", displayName: "Live Law" },
+  { id: 3, name: "https://www.barandbench.com/", displayName: "Bar & Bench" },
+  { id: 4, name: "https://main.sci.gov.in/judgments", displayName: "Supreme Court of India" },
+  { id: 5, name: "https://highcourtchd.gov.in/", displayName: "Punjab & Haryana HC" },
+  { id: 6, name: "https://www.sci.gov.in/", displayName: "SCI Official Portal" },
+  { id: 7, name: "https://www.thehindu.com/news/national/", displayName: "The Hindu (Legal)" },
 ];
-

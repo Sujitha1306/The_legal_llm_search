@@ -2,6 +2,9 @@ import ollama
 import requests
 from bs4 import BeautifulSoup
 import re
+import time
+import random
+from fake_useragent import UserAgent
 from rich.console import Console
 from rich.panel import Panel
 from halo import Halo
@@ -21,28 +24,45 @@ Available websites:
 """
 
     SYNTHESIS_PROMPT = """/no_think
-You are a NEWS READER that ONLY speaks from the CONTEXT below. Today is {current_date}.
+You are an expert INDIAN LEGAL RESEARCHER. Today is {current_date}.
+You answer questions strictly based on the legal content scraped from authoritative Indian legal sources.
 
 ABSOLUTE RULES — breaking any of these is FORBIDDEN:
 - NEVER say "I cannot provide real-time updates" or "my knowledge is limited to" or any similar phrase.
-- NEVER reference your training data, knowledge cutoff, or pre-trained knowledge in any way.
-- NEVER recommend external sources like BBC, CNN, Reuters, etc.
-- ONLY use facts from the CONTEXT section below. If the context is empty or irrelevant, say: "No relevant information was found in the scraped content."
-- Present the information as direct news facts, not as summaries of what someone else said.
+- NEVER reference your training data, training cutoff, or pre-trained knowledge.
+- NEVER recommend external websites or sources not in the context.
+- ONLY use information from the CONTEXT section below.
+- When citing legal content, include: case name, court name, judgment date, and section/article if mentioned.
+- If the context contains no relevant legal information, say: "No relevant legal information was found in the scraped sources."
+- Organise your answer clearly: use headings for different cases or topics if multiple are present.
 
 --- CONTEXT START ---
 {context}
 --- CONTEXT END ---
 
-Using ONLY the above context, answer the user's question now. Do not add any disclaimers or recommendations.
+Using ONLY the above context, answer the legal question now. Be precise and cite sources from the context.
 """
     
     FOLLOW_UP_PHRASES = ["more details", "tell me more", "elaborate", "go on"]
-    REQUEST_HEADERS = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
     TAGS_TO_SCRAPE = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'article', 'div']
     TAGS_TO_REMOVE = ['script', 'style', 'nav', 'footer', 'header', 'aside']
+
+    def _get_headers(self) -> dict:
+        """Returns headers with a fresh random User-Agent for every request."""
+        try:
+            ua = UserAgent()
+            user_agent = ua.random
+        except Exception:
+            # Fallback if fake-useragent DB is unavailable
+            user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+        return {
+            'User-Agent': user_agent,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-IN,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'DNT': '1',
+        }
 
 
     def __init__(self, whitelist_urls: list[str], model: str = 'llama3'):
@@ -95,10 +115,18 @@ Using ONLY the above context, answer the user's question now. Do not add any dis
 
     def _scrape_and_extract_text(self, url: str) -> str | None:
         """
-        Scrapes the given URL, removes clutter, and extracts clean text content.
+        Scrapes the given URL with rotating User-Agent and human-like delays.
         """
         try:
-            response = requests.get(url, headers=self.REQUEST_HEADERS, timeout=10)
+            # Human-like delay: 2–5 seconds between requests to avoid bot detection
+            delay = random.uniform(2, 5)
+            self.console.print(f"   [dim]Waiting {delay:.1f}s before fetching {url}...[/dim]")
+            time.sleep(delay)
+
+            headers = self._get_headers()
+            self.console.print(f"   [dim]User-Agent: {headers['User-Agent'][:60]}...[/dim]")
+
+            response = requests.get(url, headers=headers, timeout=15)
             response.raise_for_status()
 
             soup = BeautifulSoup(response.content, 'lxml')
@@ -121,6 +149,7 @@ Using ONLY the above context, answer the user's question now. Do not add any dis
         except Exception as e:
             self.console.print(f"[bold red]Error processing content from {url}: {e}[/bold red]")
             return None
+
 
     def _synthesize_answer(self, question: str, context: str) -> str:
         """

@@ -1,0 +1,37 @@
+[
+    {
+        "id": 1,
+        "name": "https://www.thehindu.com/news/national/",
+        "displayName": "The Hindu"
+    },
+    {
+        "id": 2,
+        "name": "https://timesofindia.indiatimes.com/india",
+        "displayName": "Times of India"
+    },
+    {
+        "id": 3,
+        "name": "https://indianexpress.com/section/india/",
+        "displayName": "Indian Express"
+    },
+    {
+        "id": 4,
+        "name": "https://www.hindustantimes.com/india-news",
+        "displayName": "Hindustan Times"
+    },
+    {
+        "id": 5,
+        "name": "https://www.indiatoday.in/india",
+        "displayName": "India Today"
+    },
+    {
+        "id": 6,
+        "name": "https://www.firstpost.com/category/india",
+        "displayName": "Firstpost"
+    },
+    {
+        "id": 7,
+        "name": "https://thewire.in/category/politics/external-affairs",
+        "displayName": "The Wire"
+    }
+]

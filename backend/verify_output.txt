@@ -1,0 +1,92 @@
+﻿
+============================================================
+CHECK 1: User-Agent Rotation
+============================================================
+  Request 1: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)
+  Request 2: Mozilla/5.0 (iPhone; CPU iPhone OS 18_3_2 like Mac OS X) AppleWebKit/605.1.15 (K
+  Request 3: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)
+python : Traceback (most recent call last):
+At line:1 char:1
++ python verify_phase1.py 2>&1 | Out-File -FilePath 
+verify_output.txt - ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceba 
+   ck (most recent call last)::String) [], RemoteEx  
+  ception
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\sujimini\OneDrive\RECORDS\project\Th
+e_LLM_Search\backend\verify_phase1.py", line 39, in 
+<module>
+    print("  \u26a0\ufe0f  PARTIAL: Some User-Agents 
+repeated ù check fake-useragent cache.")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sujimini\AppData\Roaming\Python\Pyth
+on313\site-packages\colorama\ansitowin32.py", line 
+47, in write
+    self.__convertor.write(text)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\sujimini\AppData\Roaming\Python\Pyth
+on313\site-packages\colorama\ansitowin32.py", line 
+177, in write
+    self.write_and_convert(text)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\sujimini\AppData\Roaming\Python\Pyth
+on313\site-packages\colorama\ansitowin32.py", line 
+205, in write_and_convert
+    self.write_plain_text(text, cursor, len(text))
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sujimini\AppData\Roaming\Python\Pyth
+on313\site-packages\colorama\ansitowin32.py", line 
+210, in write_plain_text
+    self.wrapped.write(text[start:end])
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\encodings\cp1252.py", line 
+19, in encode
+    return codecs.charmap_encode(input,self.errors,en
+coding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode 
+characters in position 2-3: character maps to 
+<undefined>
+
+During handling of the above exception, another 
+exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\sujimini\OneDrive\RECORDS\project\Th
+e_LLM_Search\backend\verify_phase1.py", line 41, in 
+<module>
+    print(f"  \u274c ERROR: {e}")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sujimini\AppData\Roaming\Python\Pyth
+on313\site-packages\colorama\ansitowin32.py", line 
+47, in write
+    self.__convertor.write(text)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\sujimini\AppData\Roaming\Python\Pyth
+on313\site-packages\colorama\ansitowin32.py", line 
+177, in write
+    self.write_and_convert(text)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Users\sujimini\AppData\Roaming\Python\Pyth
+on313\site-packages\colorama\ansitowin32.py", line 
+205, in write_and_convert
+    self.write_plain_text(text, cursor, len(text))
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sujimini\AppData\Roaming\Python\Pyth
+on313\site-packages\colorama\ansitowin32.py", line 
+210, in write_plain_text
+    self.wrapped.write(text[start:end])
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\encodings\cp1252.py", line 
+19, in encode
+    return codecs.charmap_encode(input,self.errors,en
+coding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode 
+character '\u274c' in position 2: character maps to 
+<undefined>
