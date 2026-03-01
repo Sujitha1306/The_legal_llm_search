@@ -28,6 +28,11 @@ const WebsiteSetup = () => {
   const pressTimer = useRef(null);
   const navigate = useNavigate();
 
+  // Helper: extract hostname from a URL string for favicons
+  const getDomain = (url) => {
+    try { return new URL(url).hostname; } catch { return url; }
+  };
+
   const handleStart = () => {
     navigate("/chat", { state: { selectedSites: selected } });
   };
@@ -42,7 +47,10 @@ const WebsiteSetup = () => {
 
   const handleAdd = () => {
     if (!newSite.trim()) return;
-    const site = { id: Date.now(), name: newSite.trim() };
+    // Accept both full URLs and bare domains; normalize to full URL
+    let fullUrl = newSite.trim();
+    if (!fullUrl.startsWith('http')) fullUrl = 'https://' + fullUrl;
+    const site = { id: Date.now(), name: fullUrl, displayName: getDomain(fullUrl) };
     setSelected([...selected, site]);
     setAvailable([...available, site]);
     setNewSite("");
@@ -106,8 +114,8 @@ const WebsiteSetup = () => {
           {selected.map((site) => (
             <Grow in key={site.id}>
               <Chip
-                icon={<Favicon domain={site.name} />}
-                label={site.name}
+                icon={<Favicon domain={getDomain(site.name)} />}
+                label={site.displayName || getDomain(site.name)}
                 onDelete={() => toggleWebsite(site)}
                 sx={{
                   background: "#333",
@@ -157,10 +165,10 @@ const WebsiteSetup = () => {
                       }}
                     >
                       <ListItemIcon sx={{ minWidth: 36 }}>
-                        <Favicon domain={site.name} />
+                        <Favicon domain={getDomain(site.name)} />
                       </ListItemIcon>
                       <ListItemText
-                        primary={site.name}
+                        primary={site.displayName || getDomain(site.name)}
                         primaryTypographyProps={{
                           color: "#f5f5f5",
                           fontWeight: selected.find((s) => s.name === site.name)

@@ -22,12 +22,16 @@ Here is the list of available websites:
 """
 
     SYNTHESIS_PROMPT = """
-You are a factual information extraction engine. Your task is to answer the user's question based *only* on the provided context.
+You are a highly capable factual information extraction engine. 
+Today's date is {current_date}.
+
+Your task is to answer the user's question based *ONLY* on the provided context.
 Follow these rules strictly:
-1. DO NOT use any of your own knowledge.
-2. ONLY use information present in the 'CONTEXT' section.
-3. If the user asks a vague question like "tell me more", provide a more detailed summary of the context.
-4. Extract key facts and direct quotes from the text to support your summary.
+1. DO NOT use any of your pre-trained knowledge.
+2. DO NOT mention your knowledge cutoff date or say you cannot provide real-time updates. The context provided IS the real-time update.
+3. ONLY use information present in the 'CONTEXT' section. If the answer isn't in the context, say "The provided context does not contain this information."
+4. If the user asks a vague question like "tell me more" or "latest news", provide a detailed, well-structured summary of the context.
+5. Extract key facts and direct quotes from the text to support your summary.
 
 --- CONTEXT ---
 {context}
@@ -122,7 +126,9 @@ Follow these rules strictly:
         """
         Uses the LLM to generate an answer based on the question and the scraped context.
         """
-        system_prompt = self.SYNTHESIS_PROMPT.format(context=context)
+        import datetime
+        current_date = datetime.datetime.now().strftime("%B %d, %Y")
+        system_prompt = self.SYNTHESIS_PROMPT.format(current_date=current_date, context=context)
         try:
             response = self.client.chat(
                 model=self.model,
@@ -190,7 +196,7 @@ if __name__ == "__main__":
         "https://thewire.in/category/politics/external-affairs"
     ]
     
-    OLLAMA_MODEL = 'gemma3:12b' 
+    OLLAMA_MODEL = 'qwen3:4b-instruct'
     
     
     console.print(Panel("[bold yellow]Please select the websites to use for this session as a reference.[/bold yellow]"))

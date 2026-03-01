@@ -3,15 +3,15 @@ import { Box, Typography, Paper, Button, Chip } from '@mui/material';
 import Favicon from './Favicon';
 
 const MainChatView = ({ selectedSites, onSearch }) => {
-    const [query, setQuery] = useState('');
+  const [query, setQuery] = useState('');
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (query.trim()) {
-            onSearch(query);
-        }
-    };
-    
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (query.trim()) {
+      onSearch(query);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -85,20 +85,23 @@ const MainChatView = ({ selectedSites, onSearch }) => {
           p: 1,
         }}
       >
-        {selectedSites.map((site) => (
-          <Chip
-            key={site.id}
-            icon={<Favicon domain={site.name} />}
-            label={site.name}
-            sx={{
-              background: "#333",
-              color: "#f5f5f5",
-              fontWeight: 500,
-              "&:hover": { background: "#444" },
-              transition: "all 0.2s ease",
-            }}
-          />
-        ))}
+        {selectedSites.map((site) => {
+          const domain = site.name.startsWith('http') ? (() => { try { return new URL(site.name).hostname; } catch { return site.name; } })() : site.name;
+          return (
+            <Chip
+              key={site.id}
+              icon={<Favicon domain={domain} />}
+              label={site.displayName || domain}
+              sx={{
+                background: "#333",
+                color: "#f5f5f5",
+                fontWeight: 500,
+                "&:hover": { background: "#444" },
+                transition: "all 0.2s ease",
+              }}
+            />
+          );
+        })}
       </Box>
     </Box>
   );

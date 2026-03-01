@@ -12,27 +12,29 @@ class OllamaSearchAgent:
     scraped from a whitelisted set of URLs.
     """
     
-    SOURCE_SELECTION_PROMPT = """
-You are an expert at selecting the most relevant online resources.
+    SOURCE_SELECTION_PROMPT = """/no_think
+You are a URL selector. Output ONLY the numbers of the best matching websites, comma-separated.
+No explanation. No extra text. Just numbers like: 1,3
 
-Respond with ONLY the numbers of the most appropriate options, separated by commas.
-Do not provide any other text or explanation.
-
-Here is the list of available websites:
+Available websites:
 {sites_list}
 """
 
-    SYNTHESIS_PROMPT = """
-You are a factual information extraction engine. Your task is to answer the user's question based *only* on the provided context.
-Follow these rules strictly:
-1. DO NOT use any of your own knowledge.
-2. ONLY use information present in the 'CONTEXT' section.
-3. If the user asks a vague question like "tell me more", provide a more detailed summary of the context.
-4. Extract key facts and direct quotes from the text to support your summary.
+    SYNTHESIS_PROMPT = """/no_think
+You are a NEWS READER that ONLY speaks from the CONTEXT below. Today is {current_date}.
 
---- CONTEXT ---
+ABSOLUTE RULES — breaking any of these is FORBIDDEN:
+- NEVER say "I cannot provide real-time updates" or "my knowledge is limited to" or any similar phrase.
+- NEVER reference your training data, knowledge cutoff, or pre-trained knowledge in any way.
+- NEVER recommend external sources like BBC, CNN, Reuters, etc.
+- ONLY use facts from the CONTEXT section below. If the context is empty or irrelevant, say: "No relevant information was found in the scraped content."
+- Present the information as direct news facts, not as summaries of what someone else said.
+
+--- CONTEXT START ---
 {context}
---- END CONTEXT ---
+--- CONTEXT END ---
+
+Using ONLY the above context, answer the user's question now. Do not add any disclaimers or recommendations.
 """
     
     FOLLOW_UP_PHRASES = ["more details", "tell me more", "elaborate", "go on"]
@@ -54,7 +56,7 @@ Follow these rules strictly:
 
     def _select_relevant_source(self, question: str) -> list[str]:
         """
-        Select multiple relevant sources instead of just one.
+        Select multiple relevant sources. Falls back to all sites if selection fails.
         """
         sites_list = "\n".join([f"{i+1}. {url}" for i, url in enumerate(self.whitelist)])
         system_prompt = self.SOURCE_SELECTION_PROMPT.format(sites_list=sites_list)
@@ -66,7 +68,8 @@ Follow these rules strictly:
                     {'role': 'system', 'content': system_prompt},
                     {'role': 'user', 'content': question}
                 ],
-                options={'temperature': 0.0}
+                options={'temperature': 0.0},
+                think=False
             )
             
             content = response['message']['content'].strip()
@@ -79,14 +82,16 @@ Follow these rules strictly:
                     selected_urls.append(self.whitelist[idx])
 
             if not selected_urls:
-                self.console.print(f"[bold red]Warning: LLM did not return valid numbers. Response: '{content}'[/bold red]")
-                return []
+                # Fallback: use all whitelisted sites so we always attempt scraping
+                self.console.print(f"[yellow]Source selector returned no match — falling back to all {len(self.whitelist)} sites.[/yellow]")
+                return list(self.whitelist)
 
             return list(set(selected_urls))  # dedupe
 
         except Exception as e:
             self.console.print(f"[bold red]Error during source selection: {e}[/bold red]")
-            return []
+            # On error, also fall back to all sites
+            return list(self.whitelist)
 
     def _scrape_and_extract_text(self, url: str) -> str | None:
         """
@@ -121,7 +126,9 @@ Follow these rules strictly:
         """
         Uses the LLM to generate an answer based on the question and the scraped context.
         """
-        system_prompt = self.SYNTHESIS_PROMPT.format(context=context)
+        import datetime
+        current_date = datetime.datetime.now().strftime("%B %d, %Y")
+        system_prompt = self.SYNTHESIS_PROMPT.format(current_date=current_date, context=context)
         try:
             response = self.client.chat(
                 model=self.model,
@@ -129,12 +136,44 @@ Follow these rules strictly:
                     {'role': 'system', 'content': system_prompt},
                     {'role': 'user', 'content': question}
                 ],
-                options={'temperature': 0.1}
+                options={'temperature': 0.1},
+                think=False  # Disable qwen3 chain-of-thought that ignores system prompts
             )
-            return response['message']['content']
+            raw = response['message']['content']
+            return self._clean_response(raw)
         except Exception as e:
             self.console.print(f"[bold red]Error during answer synthesis: {e}[/bold red]")
             return "An error occurred while generating the answer."
+
+    def _clean_response(self, text: str) -> str:
+        """
+        Post-processing safety net: removes any paragraph where the model
+        ignores the system prompt and talks about its training cutoff or
+        recommends external news sources.
+        """
+        BAD_PHRASES = [
+            "as of now, i can't",
+            "as of now, i cannot",
+            "i can't provide real-time",
+            "i cannot provide real-time",
+            "my knowledge is based on",
+            "my knowledge cutoff",
+            "data up to",
+            "i recommend checking",
+            "for the most accurate",
+            "for the most up-to-date",
+            "just let me know",
+            "i can summarize a specific topic",
+        ]
+        paragraphs = text.split('\n')
+        cleaned = []
+        for para in paragraphs:
+            lower = para.lower()
+            if any(bad in lower for bad in BAD_PHRASES):
+                continue  # Drop this line entirely
+            cleaned.append(para)
+        # Strip leading/trailing blank lines
+        return '\n'.join(cleaned).strip()
 
     def query(self, question: str) -> dict:
         """
@@ -158,11 +197,14 @@ Follow these rules strictly:
 
             self.console.print(f"   [dim]Sources selected: {', '.join(source_urls)}[/dim]")
 
+            first_ctx = None
             for url in source_urls:
                 ctx = self._scrape_and_extract_text(url)
                 if ctx:
                     answer = self._synthesize_answer(question, ctx)
                     results[url] = answer
+                    if first_ctx is None:  # capture first successful context for follow-ups
+                        first_ctx = ctx
 
             if not results:
                 return {
@@ -172,7 +214,7 @@ Follow these rules strictly:
 
             # Store last context & source for follow-up (use the first one only)
             first_src = list(results.keys())[0]
-            self.last_context = ctx
+            self.last_context = first_ctx
             self.last_source = first_src
 
         return {"answers": results, "sources": source_urls}
@@ -191,7 +233,7 @@ if __name__ == "__main__":
         "https://thewire.in/category/politics/external-affairs"
     ]
     
-    OLLAMA_MODEL = 'gemma3:12b' 
+    OLLAMA_MODEL = 'qwen3:4b-instruct'
     
     console.print(Panel("[bold yellow]Please select the websites to use for this session as a reference.[/bold yellow]"))
     for i, site in enumerate(ALL_SITES):
